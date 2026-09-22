@@ -1,0 +1,154 @@
+{
+  "APIcast": {
+    "url": "https://github.com/platex-rehor-bot/APIcast.git",
+    "upstream": "https://github.com/3scale/APIcast.git"
+  },
+  "turnpike": {
+    "url": "https://github.com/platex-rehor-bot/turnpike.git",
+    "upstream": "https://github.com/RedHatInsights/turnpike.git"
+  },
+  "chrome-service-backend": {
+    "url": "https://github.com/platex-rehor-bot/chrome-service-backend.git",
+    "upstream": "https://github.com/RedHatInsights/chrome-service-backend.git"
+  },
+  "quickstarts": {
+    "url": "https://github.com/platex-rehor-bot/quickstarts.git",
+    "upstream": "https://github.com/RedHatInsights/quickstarts.git"
+  },
+  "notifications-backend": {
+    "url": "https://github.com/platex-rehor-bot/notifications-backend.git",
+    "upstream": "https://github.com/RedHatInsights/notifications-backend.git"
+  },
+  "inventory-api": {
+    "url": "https://github.com/platex-rehor-bot/inventory-api.git",
+    "upstream": "https://github.com/project-kessel/inventory-api.git"
+  },
+  "insights-rbac": {
+    "url": "https://github.com/platex-rehor-bot/insights-rbac.git",
+    "upstream": "https://github.com/project-kessel/insights-rbac.git"
+  },
+  "export-service-go": {
+    "url": "https://github.com/platex-rehor-bot/export-service-go.git",
+    "upstream": "https://github.com/RedHatInsights/export-service-go.git"
+  },
+  "pdf-generator": {
+    "url": "https://github.com/platex-rehor-bot/pdf-generator.git",
+    "upstream": "https://github.com/RedHatInsights/pdf-generator.git"
+  },
+  "sources-api-go": {
+    "url": "https://github.com/platex-rehor-bot/sources-api-go.git",
+    "upstream": "https://github.com/RedHatInsights/sources-api-go.git"
+  },
+  "insights-ingress-go": {
+    "url": "https://github.com/platex-rehor-bot/insights-ingress-go.git",
+    "upstream": "https://github.com/RedHatInsights/insights-ingress-go.git"
+  },
+  "payload-tracker-go": {
+    "url": "https://github.com/platex-rehor-bot/payload-tracker-go.git",
+    "upstream": "https://github.com/RedHatInsights/payload-tracker-go.git"
+  },
+  "insights-storage-broker": {
+    "url": "https://github.com/platex-rehor-bot/insights-storage-broker.git",
+    "upstream": "https://github.com/RedHatInsights/insights-storage-broker.git"
+  },
+  "entitlements-api-go": {
+    "url": "https://github.com/platex-rehor-bot/entitlements-api-go.git",
+    "upstream": "https://github.com/RedHatInsights/entitlements-api-go.git"
+  },
+  "astro-virtual-assistant": {
+    "url": "https://github.com/platex-rehor-bot/astro-virtual-assistant.git",
+    "upstream": "https://github.com/RedHatInsights/astro-virtual-assistant.git"
+  },
+  "hermod": {
+    "url": "https://github.com/platex-rehor-bot/hermod.git",
+    "upstream": "https://github.com/RedHatInsights/hermod.git"
+  },
+  "scheduler": {
+    "url": "https://github.com/platex-rehor-bot/scheduler.git",
+    "upstream": "https://github.com/RedHatInsights/scheduler.git"
+  },
+  "insights-chrome": {
+    "url": "https://github.com/platex-rehor-bot/insights-chrome.git",
+    "upstream": "https://github.com/RedHatInsights/insights-chrome.git"
+  },
+  "advisor-backend": {
+    "url": "https://github.com/platex-rehor-bot/advisor-backend.git",
+    "upstream": "https://github.com/RedHatInsights/advisor-backend.git"
+  },
+  "ccx-data-pipeline": {
+    "url": "https://gitlab.cee.redhat.com/platform-experience-services-bot/ccx-data-pipeline.git",
+    "upstream": "https://gitlab.cee.redhat.com/ccx/ccx-data-pipeline.git",
+    "host": "gitlab"
+  },
+  "cloud-connector": {
+    "url": "https://github.com/platex-rehor-bot/cloud-connector.git",
+    "upstream": "https://github.com/RedHatInsights/cloud-connector.git"
+  },
+  "cloudigrade": {
+    "url": "https://github.com/platex-rehor-bot/cloudigrade.git",
+    "upstream": "https://github.com/cloudigrade/cloudigrade.git"
+  },
+  "compliance-backend": {
+    "url": "https://github.com/platex-rehor-bot/compliance-backend.git",
+    "upstream": "https://github.com/RedHatInsights/compliance-backend.git"
+  },
+  "config-manager": {
+    "url": "https://github.com/platex-rehor-bot/config-manager.git",
+    "upstream": "https://github.com/RedHatInsights/config-manager.git"
+  },
+  "content-sources-backend": {
+    "url": "https://github.com/platex-rehor-bot/content-sources-backend.git",
+    "upstream": "https://github.com/content-services/content-sources-backend.git"
+  },
+  "koku": {
+    "url": "https://github.com/platex-rehor-bot/koku.git",
+    "upstream": "https://github.com/project-koku/koku.git"
+  },
+  "insights-host-inventory": {
+    "url": "https://github.com/platex-rehor-bot/insights-host-inventory.git",
+    "upstream": "https://github.com/RedHatInsights/insights-host-inventory.git"
+  },
+  "malware-detection-backend": {
+    "url": "https://gitlab.cee.redhat.com/platform-experience-services-bot/malware-detection-backend.git",
+    "upstream": "https://gitlab.cee.redhat.com/insights-platform/malware-detection-backend.git",
+    "host": "gitlab"
+  },
+  "patchman-engine": {
+    "url": "https://github.com/platex-rehor-bot/patchman-engine.git",
+    "upstream": "https://github.com/RedHatInsights/patchman-engine.git"
+  },
+  "playbook-dispatcher": {
+    "url": "https://github.com/platex-rehor-bot/playbook-dispatcher.git",
+    "upstream": "https://github.com/RedHatInsights/playbook-dispatcher.git"
+  },
+  "insights-remediations": {
+    "url": "https://github.com/platex-rehor-bot/insights-remediations.git",
+    "upstream": "https://github.com/RedHatInsights/insights-remediations.git"
+  },
+  "rhsm-api-proxy": {
+    "url": "https://github.com/platex-rehor-bot/rhsm-api-proxy.git",
+    "upstream": "https://github.com/RedHatInsights/rhsm-api-proxy.git"
+  },
+  "rhsm-api": {
+    "url": "https://gitlab.cee.redhat.com/platform-experience-services-bot/rhsm-api.git",
+    "upstream": "https://gitlab.cee.redhat.com/it-pnt/rhsm/rhsm-api.git",
+    "host": "gitlab"
+  },
+  "digital-roadmap-backend": {
+    "url": "https://github.com/platex-rehor-bot/digital-roadmap-backend.git",
+    "upstream": "https://github.com/RedHatInsights/digital-roadmap-backend.git"
+  },
+  "ros-backend": {
+    "url": "https://github.com/platex-rehor-bot/ros-backend.git",
+    "upstream": "https://github.com/RedHatInsights/ros-backend.git"
+  },
+  "automation-analytics-backend": {
+    "url": "https://gitlab.cee.redhat.com/platform-experience-services-bot/automation-analytics-backend.git",
+    "upstream": "https://gitlab.cee.redhat.com/automation-analytics/automation-analytics-backend.git",
+    "host": "gitlab"
+  },
+  "vulnerability-engine": {
+    "url": "https://github.com/platex-rehor-bot/vulnerability-engine.git",
+    "upstream": "https://github.com/RedHatInsights/vulnerability-engine.git"
+  }
+}
