@@ -150,5 +150,10 @@
   "vulnerability-engine": {
     "url": "https://github.com/platex-rehor-bot/vulnerability-engine.git",
     "upstream": "https://github.com/RedHatInsights/vulnerability-engine.git"
+  },
+  "app-interface": {
+    "url": "https://gitlab.cee.redhat.com/platform-experience-services-bot/app-interface.git",
+    "upstream": "https://gitlab.cee.redhat.com/service/app-interface.git",
+    "host": "gitlab"
   }
 }

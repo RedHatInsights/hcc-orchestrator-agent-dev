@@ -89,24 +89,44 @@ asking for clarification and stop — do not guess the focus.
    spots); escalate to a deeper trace only where the cursory result is ambiguous.
    Exclude `vendor/`, `node_modules/`, `.git/`, `__pycache__/`, tests (note a test
    only if it reveals a production pattern).
-6. **Authoritative-signal discipline.** Do NOT assert yes/no from a loose keyword
+6. **Cross-reference the deploy/config repo — ONLY if the focus needs it.** Some
+   values the focus asks for do not live in the service repo; they are set fleet-wide
+   in the deploy/config repo (**app-interface**): live per-environment env vars, SaaS
+   deploy overrides, gateway authorization policies, service-account allowlisting. The
+   service repo shows only the *template default* (e.g. a ClowdApp param default); the
+   *live* value is in app-interface. Do this step only when the focus explicitly asks
+   for deployed / live / per-environment values — otherwise skip it.
+   - Resolve app-interface's clone URL from `project-repos.json` (key `app-interface`,
+     clone from `upstream`). **If it is absent, or the clone fails (auth or size), do
+     NOT fail the scan** — mark each such value `unavailable — app-interface not
+     reachable` and continue with the repo-derived template values.
+   - It is very large: clone **shallow + sparse**, then narrow to the config trees —
+     `git clone --depth 1 --filter=blob:none --sparse <upstream> ./repos/app-interface`
+     then `git -C ./repos/app-interface sparse-checkout set data resources`.
+   - Look up *this* service: its SaaS deploy file (`data/services/**/deploy.yml`
+     targets), environment-level params (`data/products/**/environments/{stage,
+     production}.yml`), and any gateway / authorization-policy resource under
+     `resources/**`. Report live values with `file:line`, and keep them **distinct**
+     from the template default (say which is which).
+   - Read-only, like everything else — never modify or push app-interface.
+7. **Authoritative-signal discipline.** Do NOT assert yes/no from a loose keyword
    match — a keyword can be a comment, a variable name, a vendored file, or a false
    cognate (a real miss: "export" matched a Candlepin manifest, not the Export
    service). Anchor each verdict on the *authoritative/structural* signal for the
    question — a manifest/lockfile entry, a config/dependency block, a concrete API
    path, a schema or migration, an actual call site. Treat a bare keyword hit as a
    lead to verify, not as evidence.
-7. **Negative-finding discipline.** A "no / n/a / not present" verdict MUST state
+8. **Negative-finding discipline.** A "no / n/a / not present" verdict MUST state
    *which* signals you searched and found empty — never a bare "n/a". A negative is
    only valid against the canonical active repo; from an archived/unreachable mirror,
    downgrade it to "unverified".
-8. **Emit the per-service result** (format below) as a Jira comment on the analysis
+9. **Emit the per-service result** (format below) as a Jira comment on the analysis
    ticket, and `jira_update_issue` to reflect the verdict/summary.
-9. **Persist.** `memory_store` the durable conclusion (category `codebase_pattern`
-   or `learning`, with `repo` + `tags`). Update the analysis task record
-   (`task_update`) with `last_step: "analysis_posted"` and a structured
-   `metadata.findings` block so `/aggregate-scan` can roll it up.
-10. Do **not** transition the ticket to done or archive it — analysis tickets stay
+10. **Persist.** `memory_store` the durable conclusion (category `codebase_pattern`
+    or `learning`, with `repo` + `tags`). Update the analysis task record
+    (`task_update`) with `last_step: "analysis_posted"` and a structured
+    `metadata.findings` block so `/aggregate-scan` can roll it up.
+11. Do **not** transition the ticket to done or archive it — analysis tickets stay
     open until the aggregate + human review.
 
 ## Searching by stack (generic guidance)
