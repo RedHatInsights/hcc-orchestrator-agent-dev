@@ -37,7 +37,8 @@ Epic  labels: hcc-ai-orchestrator + hcc-scan   (summary + description state the 
   ├─ needs-investigation repo:advisor-backend  ┐  worked 1/cycle by `analyst`
   ├─ needs-investigation repo:patchman-engine  │  via /scan-service (read-only):
   ├─ …                                          ┘  Jira comment + memory + metadata.findings
-  │  /aggregate-scan  → epic-level markdown table + patterns + gaps
+  │  ── human adds `scan-aggregate` + returns epic to pickup queue ──
+  │  /aggregate-scan  → epic-level markdown table + patterns + gaps (label removed)
   │  ── human reviews, adds `impl-approved` ──
   │  /generate-impl-tickets
   ├─ hcc-impl repo:advisor-backend  ┐  normal implement→PR loop,
@@ -77,10 +78,13 @@ read-only, derives stack-appropriate searches from the focus, and answers each
 question with `file:line` evidence (plus negative-finding discipline). It posts the
 per-service verdict + checklist to the child ticket and stores `metadata.findings`.
 
-**4. Aggregate (bot, one cycle).** `/aggregate-scan` rolls the children into an
-epic-level table (service · stack · branch@HEAD · verdict · evidence), the common
-pattern, outliers, and a follow-ups table, and reconciles against the registry so no
-target is skipped.
+**4. Aggregate (human-triggered, bot one cycle).** Aggregation does **not** fire on its
+own. When the child analyses look done, a human adds the **`scan-aggregate`** label to
+the epic and returns it to a pickup status (e.g. *To Do*, assignee empty — an
+*In Progress* epic is not re-picked-up). On that pickup `/aggregate-scan` rolls the
+children into an epic-level table (service · stack · branch@HEAD · verdict · evidence),
+the common pattern, outliers, and a follow-ups table, reconciles against the registry so
+no target is skipped, and removes the `scan-aggregate` label (re-add to refresh later).
 
 **5. Implementation tickets (bot, after human sign-off).** A human reviews the epic
 and adds `impl-approved`. `/generate-impl-tickets` then creates `hcc-impl` tickets

@@ -6,9 +6,11 @@ description: >
   completeness reconciliation so no target was skipped. Read-only: writes only to
   the epic (comment/description) and memory.
 when_to_use: >
-  When all (or a chosen subset of) analysis children of a `hcc-scan` epic have
-  posted their findings (`last_step: analysis_posted`). Run to produce the
+  When a `hcc-scan` epic carrying the **`scan-aggregate`** label is picked up — the
+  human adds that label (and returns the epic to the pickup queue) once the analysis
+  children have posted their findings (`last_step: analysis_posted`). Produces the
   epic-level summary the humans review before implementation tickets are generated.
+  Also user-invocable on demand.
 user-invocable: true
 allowed-tools:
   - Read
@@ -58,7 +60,10 @@ allowed-tools:
 4. **Persist.** `memory_store` the cross-service conclusion (the common pattern and
    the outliers for this focus) with `tags`; update the epic task record with
    `last_step: "aggregated"` and a `metadata.followups` list the next step reads.
-5. Do **not** create implementation tickets here. Leave the epic for human review;
+5. **Clear the trigger.** `jira_update_issue` to remove the **`scan-aggregate`** label
+   from the epic, so it is not re-aggregated on every subsequent pickup. (The human
+   re-adds it to refresh the summary later — e.g. after an expansion adds services.)
+6. Do **not** create implementation tickets here. Leave the epic for human review;
    `/generate-impl-tickets` runs after sign-off.
 
 ## Notes

@@ -48,11 +48,17 @@
 works carries it. The labels below select what to *do* with a picked-up ticket, and
 persona choice overrides the default tech-stack auto-detection:
 
-1. **`needs-investigation` + `scan:<epic>` label → `analyst` persona (READ-ONLY).**
+1. **`hcc-scan` label (a scan-coordinator epic) → run a scan *skill*, not a persona.**
+   - epic also has **`scan-aggregate`** → `/aggregate-scan`: post/refresh the
+     epic-level summary from the children, then **remove the `scan-aggregate` label**
+     so it does not re-aggregate on every subsequent pickup.
+   - else → `/plan-scan` (additive — creates only the analysis children that do not
+     exist yet, so re-picking-up an epic to widen its scope is safe).
+2. **`needs-investigation` + `scan:<epic>` label → `analyst` persona (READ-ONLY).**
    Never modify a target repo, never push, never open a PR. Work via `/scan-service`.
    See below.
-2. **`persona:<name>` label → that persona**, if present (explicit override).
-3. **Otherwise → auto-detect by the target repo's tech stack** (Go/Python/Ruby/Java
+3. **`persona:<name>` label → that persona**, if present (explicit override).
+4. **Otherwise → auto-detect by the target repo's tech stack** (Go/Python/Ruby/Java
    → `backend`; React/PatternFly → `frontend`).
 
 Implementation tickets from a scan carry `hcc-ai-orchestrator` + `hcc-impl` +
@@ -72,10 +78,14 @@ carries `hcc-ai-orchestrator` (the bot pickup label).
 2. **Analyze** — each analysis child is worked one-per-cycle by the `analyst`
    persona via `/scan-service`: read-only audit → per-service Jira comment (verdict +
    file:line evidence + checklist) → `memory_store` → `metadata.findings` on the task.
-3. **Aggregate** — when children have posted findings, `/aggregate-scan` rolls them
-   into an epic-level markdown table (per-service findings + common patterns +
-   outliers + follow-ups) posted on the epic, and reconciles against the registry so
-   no target is skipped.
+3. **Aggregate** — this stage is **human-triggered**: when the analyses look done, a
+   human adds the **`scan-aggregate`** label to the epic and moves it back into the
+   pickup queue (a `BOT_KANBAN_STATUSES` status — e.g. *To Do* — with assignee empty;
+   an *In Progress* epic is not re-picked-up). On that pickup, `/aggregate-scan` rolls
+   the children into an epic-level markdown table (per-service findings + common
+   patterns + outliers + follow-ups) posted on the epic, reconciles against the
+   registry so no target is skipped, and removes the `scan-aggregate` label. Re-add the
+   label anytime to refresh the summary (e.g. after an expansion adds services).
 4. **Generate implementation tickets** — ONLY after a human approves the follow-ups
    (`impl-approved` on the epic), `/generate-impl-tickets` turns them into
    `hcc-impl` tickets (core-hcc / tenant / both), linked back, which then flow through

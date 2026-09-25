@@ -58,11 +58,20 @@ Create an **epic** in the bot's Jira project:
 
   Anything on the epic flows into every per-service analysis automatically.
 
-### 2. Let it run (no action)
+### 2. Let it analyze (no action)
 The bot runs `/plan-scan` → one analysis child per service
 (`hcc-ai-orchestrator` + `needs-investigation` + `repo:<name>` + `scan:<EPIC-KEY>`),
-works each read-only via the `analyst` persona, then `/aggregate-scan` posts an
-epic-level findings table.
+then works each child read-only via the `analyst` persona, posting a per-service
+verdict + `file:line` evidence to that child ticket.
+
+### 2b. Aggregate to the epic (one action)
+Aggregation is **human-triggered** — the bot does not roll findings up on its own.
+When the child analyses look done, add the **`scan-aggregate`** label to the epic and
+move it back into the pickup queue (a pickup status such as *To Do*, assignee empty —
+an *In Progress* epic won't be re-picked-up). The bot runs `/aggregate-scan`, posts
+the epic-level findings table (per-service rows + common patterns + follow-ups), and
+removes the `scan-aggregate` label. Re-add it anytime to refresh (e.g. after an
+expansion adds services).
 
 ### Expanding a scan (grow one epic)
 Start narrow, prove the focus, then widen **the same epic** — no need to file a new one.
@@ -70,9 +79,9 @@ Edit the epic's scope (broaden the `Services:` line, swap to a broader `group:` 
 or remove the scope entirely for all ~37) and **re-trigger the epic** (move it back into
 the bot's pickup queue — the same status / no-assignee state it started in). `/plan-scan`
 runs **additively**: it creates analysis children only for the newly in-scope services
-and leaves the existing analyses (and their results) untouched. The aggregated findings
-table on the epic grows to include the new services automatically. Re-triggering with no
-scope change is a safe no-op.
+and leaves the existing analyses (and their results) untouched. Re-triggering with no
+scope change is a safe no-op. Once the new analyses finish, re-add **`scan-aggregate`**
+(step 2b) to refresh the epic's table with the added services.
 
 ### 3. Approve implementation
 Review the epic's aggregated table. To turn follow-ups into work, add **`impl-approved`**
@@ -85,8 +94,13 @@ implement→PR loop with the `backend`/`frontend` persona. Then review the PRs.
 |---|---|
 | Scan epic | `hcc-ai-orchestrator` `hcc-scan` (+ optional `group:tenant`\|`group:platform` label, or a `Services: a, b, c` line in the description) |
 | Analysis child (bot-created) | `hcc-ai-orchestrator` `needs-investigation` `repo:<name>` `scan:<EPIC-KEY>` |
+| Aggregate trigger | add `scan-aggregate` to the epic (bot removes it after posting) |
 | Approval | add `impl-approved` to the epic |
 | Impl ticket (bot-created) | `hcc-ai-orchestrator` `hcc-impl` `repo:<name>` |
+
+**Re-triggering an epic** (to aggregate, expand scope, or approve) requires the epic to
+be back in a **pickup status** (e.g. *To Do*) with **assignee empty** — the bot does not
+re-pick-up an *In Progress* epic. Adding a label alone is not enough.
 
 Extra: `persona:<name>` on any ticket forces a specific persona. One-off read-only
 investigation (no scan): `hcc-ai-orchestrator` + `needs-investigation` + `repo:<name>`.
