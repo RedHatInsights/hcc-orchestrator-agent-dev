@@ -50,6 +50,13 @@ Create an **epic** in the bot's Jira project:
     If both a `group:` label and a `Services:` line are present, the explicit list
     wins (intersected with the registry). Names must match `repo` values in the
     registry (see the list command at the bottom).
+- **Adding context / reference material.** The bot reads **ticket text** and **Jira
+  attachments** only — it has **no web access**, so a pasted Google Doc / Drive /
+  external link is *not* fetchable. Put the material where the bot can see it:
+  - paste it directly into the epic **description** or a **comment**, or
+  - **attach the file** to the epic (spec, CSV of targets, reference doc).
+
+  Anything on the epic flows into every per-service analysis automatically.
 
 ### 2. Let it run (no action)
 The bot runs `/plan-scan` → one analysis child per service

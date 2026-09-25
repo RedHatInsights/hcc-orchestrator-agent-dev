@@ -28,6 +28,7 @@ allowed-tools:
   - "Bash(gh api *)"
   - "Bash(python3 .claude/skills/service-registry/registry.py *)"
   - mcp__mcp-atlassian__jira_get_issue
+  - mcp__mcp-atlassian__jira_download_attachments
   - mcp__mcp-atlassian__jira_add_comment
   - mcp__mcp-atlassian__jira_update_issue
   - mcp__bot-memory__*
@@ -60,7 +61,12 @@ asking for clarification and stop — do not guess the focus.
 
 1. **Read the focus** from the ticket (`jira_get_issue`). Restate it as concrete,
    answerable questions before you start. If the ticket supplies specific search
-   terms, acceptance criteria, or a definition of "done", use them.
+   terms, acceptance criteria, or a definition of "done", use them. If the child ticket
+   **or its parent epic** has **attachments** (a spec, a CSV of targets, a reference
+   doc), pull them with `jira_download_attachments` and `Read` them — they are part of
+   the brief. The epic key is the `scan:<epic-key>` label on this ticket, so you can
+   download the epic's attachments directly. Note: a pasted Google Doc / external URL
+   is *not* fetchable (no web access); rely on ticket text and attachments only.
 2. **Load registry context.** `registry.py resolve <repo> --json` for the stack,
    `upstream`, and `host`. `memory_search` the repo + focus keywords for anything
    already known so you build on it instead of repeating it.
