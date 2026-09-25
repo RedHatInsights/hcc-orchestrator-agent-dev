@@ -66,7 +66,10 @@ python3 .claude/skills/service-registry/registry.py list --group all --json
 ```
 and creates one `[analysis] <focus> — <repo>` child per service (`hcc-ai-orchestrator`,
 `needs-investigation`, `repo:<name>`, `scan:<EPIC-KEY>`), linked to the epic, then
-posts the plan. (If `all` would create more than ~20 children it confirms scope first.)
+posts the plan. (If it would create more than ~20 children it confirms scope first.)
+`/plan-scan` is **additive**: widen the epic's `Services:`/`group:` scope and re-trigger
+the epic, and it back-fills children only for the newly in-scope services — one epic can
+grow from a small proof to all ~37 without a new epic, and re-running never duplicates.
 
 **3. Analyze (bot, one service per cycle).** For each child, the `analyst` persona
 runs `/scan-service`: it reads the focus from the ticket, clones the active repo

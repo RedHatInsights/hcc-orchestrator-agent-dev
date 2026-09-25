@@ -64,6 +64,16 @@ The bot runs `/plan-scan` → one analysis child per service
 works each read-only via the `analyst` persona, then `/aggregate-scan` posts an
 epic-level findings table.
 
+### Expanding a scan (grow one epic)
+Start narrow, prove the focus, then widen **the same epic** — no need to file a new one.
+Edit the epic's scope (broaden the `Services:` line, swap to a broader `group:` label,
+or remove the scope entirely for all ~37) and **re-trigger the epic** (move it back into
+the bot's pickup queue — the same status / no-assignee state it started in). `/plan-scan`
+runs **additively**: it creates analysis children only for the newly in-scope services
+and leaves the existing analyses (and their results) untouched. The aggregated findings
+table on the epic grows to include the new services automatically. Re-triggering with no
+scope change is a safe no-op.
+
 ### 3. Approve implementation
 Review the epic's aggregated table. To turn follow-ups into work, add **`impl-approved`**
 to the epic. The bot runs `/generate-impl-tickets` → `hcc-ai-orchestrator` + `hcc-impl`
