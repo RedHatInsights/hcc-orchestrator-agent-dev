@@ -16,6 +16,7 @@ allowed-tools:
   - Read
   - "Bash(python3 .claude/skills/service-registry/registry.py *)"
   - mcp__mcp-atlassian__jira_get_issue
+  - mcp__mcp-atlassian__jira_download_attachments
   - mcp__mcp-atlassian__jira_create_issue
   - mcp__mcp-atlassian__jira_create_issue_link
   - mcp__mcp-atlassian__jira_update_issue
@@ -45,8 +46,13 @@ status and stop.
 
 ## Steps
 
-1. **Determine focus + target set.** Read the epic. Copy its focus verbatim (do not
-   reinterpret it). Determine the target set with the precedence above:
+1. **Determine focus + target set.** Read the epic (`jira_get_issue`). Copy its focus
+   verbatim (do not reinterpret it). If the epic has **attachments** (a spec, a target
+   list, a reference doc), pull them with `jira_download_attachments` and `Read` them —
+   they are part of the brief, and each analysis child's description should point to
+   the relevant one. (Pasted Google Doc / external URLs are not fetchable — the bot has
+   no web access; only ticket text and attachments are usable.) Determine the target
+   set with the precedence above:
    - **`Services:` line present** → those repos (validate each against the registry;
      flag any unknown name in the plan comment).
    - **else `group:` label** → `registry.py list --group <platform|tenant> --json`.
