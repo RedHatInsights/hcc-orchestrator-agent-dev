@@ -40,7 +40,51 @@
 - **vulnerability-engine**: `https://github.com/RedHatInsights/vulnerability-engine`
 
 ## Detected Tech Stacks
-- **hcc-orchestrator**: envs=[], personas=[frontend, backend]
+- **hcc-orchestrator**: envs=[], personas=[analyst, backend, frontend]
+
+## Persona routing
+
+`hcc-ai-orchestrator` is the bot pickup label (`BOT_LABEL`) — every ticket the bot
+works carries it. The labels below select what to *do* with a picked-up ticket, and
+persona choice overrides the default tech-stack auto-detection:
+
+1. **`needs-investigation` + `scan:<epic>` label → `analyst` persona (READ-ONLY).**
+   Never modify a target repo, never push, never open a PR. Work via `/scan-service`.
+   See below.
+2. **`persona:<name>` label → that persona**, if present (explicit override).
+3. **Otherwise → auto-detect by the target repo's tech stack** (Go/Python/Ruby/Java
+   → `backend`; React/PatternFly → `frontend`).
+
+Implementation tickets from a scan carry `hcc-ai-orchestrator` + `hcc-impl` +
+`repo:<name>` and **no** `needs-investigation` label, so they route to
+`backend`/`frontend` and flow through the normal implement→PR loop.
+
+## Cross-service scan workflow (analysis → tickets → implementation)
+
+A scan runs in four human-gated stages. The parallelism is in the *loop* (one
+service per cycle across many cycles), not in a single cycle. Every ticket below also
+carries `hcc-ai-orchestrator` (the bot pickup label).
+
+1. **Plan** — a scan-coordinator epic (labels `hcc-ai-orchestrator` + `hcc-scan`,
+   focus in its summary) is picked up → run `/plan-scan`. It resolves the target set
+   from `/service-registry` and creates one read-only analysis child per service
+   (`needs-investigation` + `repo:<name>` + `scan:<epic-key>`), linked to the epic.
+2. **Analyze** — each analysis child is worked one-per-cycle by the `analyst`
+   persona via `/scan-service`: read-only audit → per-service Jira comment (verdict +
+   file:line evidence + checklist) → `memory_store` → `metadata.findings` on the task.
+3. **Aggregate** — when children have posted findings, `/aggregate-scan` rolls them
+   into an epic-level markdown table (per-service findings + common patterns +
+   outliers + follow-ups) posted on the epic, and reconciles against the registry so
+   no target is skipped.
+4. **Generate implementation tickets** — ONLY after a human approves the follow-ups
+   (`impl-approved` on the epic), `/generate-impl-tickets` turns them into
+   `hcc-impl` tickets (core-hcc / tenant / both), linked back, which then flow through
+   the normal implement loop.
+
+Read-only enforcement for analysis: the `scan-service` skill's `allowed-tools`
+exclude `Edit`/`Write`/push/PR, and the `analyst` persona forbids mutation. A
+hard runtime guarantee (a PreToolUse deny-hook) is a framework-level ask — the
+config-only instance cannot currently ship one (see `docs/scan-workflow.md`).
 
 ## Team Conventions
 
