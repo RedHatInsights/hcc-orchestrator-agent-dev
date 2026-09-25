@@ -25,6 +25,7 @@ allowed-tools:
   - "Bash(ls *)"
   - "Bash(find *)"
   - "Bash(cat *)"
+  - "Bash(gh api *)"
   - "Bash(python3 .claude/skills/service-registry/registry.py *)"
   - mcp__mcp-atlassian__jira_get_issue
   - mcp__mcp-atlassian__jira_add_comment
@@ -35,9 +36,10 @@ allowed-tools:
 # scan-service — per-service read-only analysis
 
 The per-service worker for a decomposed cross-service scan. It carries a reusable
-scan *methodology* (evidence discipline, canonical-repo resolution, negative-finding
-discipline) that is independent of any particular analysis. **The subject of the
-scan comes entirely from the ticket** — this skill has no built-in dimension.
+scan *methodology* (evidence discipline, canonical-repo resolution, authoritative-
+signal and negative-finding discipline) that is independent of any particular
+analysis. **The subject of the scan comes entirely from the ticket** — this skill has
+no built-in dimension.
 
 **READ-ONLY, ALWAYS.** This skill's `allowed-tools` exclude `Edit`, `Write`, and all
 mutating git (`commit`/`push`) and PR creation. Do not modify the target repo. Do not
@@ -64,10 +66,15 @@ asking for clarification and stop — do not guess the focus.
    already known so you build on it instead of repeating it.
 3. **Get the active repo.** Clone shallow into `./repos/<repo>/` from `upstream`
    (read-only; no fork needed). For `host: gitlab` use the gitlab upstream URL.
-   **Resolve the canonical *active* repo**: if the GitHub repo is archived/EOL/
-   migrated, the live code is usually on gitlab.cee.redhat.com — scan that, or if
-   unreachable, tag every finding "unverified — stale mirror" and emit NO definitive
-   negative. Record `branch@HEAD` for reproducibility.
+   **Resolve the canonical *active* repo before trusting anything you find** — scanning
+   a dead mirror produces false negatives. Check for archived/EOL/migrated:
+   - `gh api repos/<org>/<repo> --jq .archived` (true → archived),
+   - a stale last-commit date, or a `"Prepare for archive"`-style HEAD commit.
+
+   If archived/EOL/migrated, the live code is usually on gitlab.cee.redhat.com — scan
+   that instead; if it's unreachable from this environment, tag every finding
+   "unverified — stale mirror" and emit NO definitive negative. Record `branch@HEAD`
+   for reproducibility.
 4. **Probe siblings** for multi-repo/variant services before concluding absence
    (e.g. `<svc>-ocp-backend`, service families).
 5. **Investigate the focus.** Derive search patterns from the focus + the repo's
@@ -76,18 +83,25 @@ asking for clarification and stop — do not guess the focus.
    spots); escalate to a deeper trace only where the cursory result is ambiguous.
    Exclude `vendor/`, `node_modules/`, `.git/`, `__pycache__/`, tests (note a test
    only if it reveals a production pattern).
-6. **Negative-finding discipline.** A "no / n/a / not present" verdict MUST state
+6. **Authoritative-signal discipline.** Do NOT assert yes/no from a loose keyword
+   match — a keyword can be a comment, a variable name, a vendored file, or a false
+   cognate (a real miss: "export" matched a Candlepin manifest, not the Export
+   service). Anchor each verdict on the *authoritative/structural* signal for the
+   question — a manifest/lockfile entry, a config/dependency block, a concrete API
+   path, a schema or migration, an actual call site. Treat a bare keyword hit as a
+   lead to verify, not as evidence.
+7. **Negative-finding discipline.** A "no / n/a / not present" verdict MUST state
    *which* signals you searched and found empty — never a bare "n/a". A negative is
    only valid against the canonical active repo; from an archived/unreachable mirror,
    downgrade it to "unverified".
-7. **Emit the per-service result** (format below) as a Jira comment on the analysis
+8. **Emit the per-service result** (format below) as a Jira comment on the analysis
    ticket, and `jira_update_issue` to reflect the verdict/summary.
-8. **Persist.** `memory_store` the durable conclusion (category `codebase_pattern`
+9. **Persist.** `memory_store` the durable conclusion (category `codebase_pattern`
    or `learning`, with `repo` + `tags`). Update the analysis task record
    (`task_update`) with `last_step: "analysis_posted"` and a structured
    `metadata.findings` block so `/aggregate-scan` can roll it up.
-9. Do **not** transition the ticket to done or archive it — analysis tickets stay
-   open until the aggregate + human review.
+10. Do **not** transition the ticket to done or archive it — analysis tickets stay
+    open until the aggregate + human review.
 
 ## Searching by stack (generic guidance)
 

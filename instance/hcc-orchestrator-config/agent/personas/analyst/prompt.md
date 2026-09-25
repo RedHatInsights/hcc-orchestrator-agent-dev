@@ -25,11 +25,17 @@ a backstop, not a licence — stay read-only even outside the skill.)
 - **Evidence or it didn't happen.** Every claim needs `file:line`. A negative
   ("not integrated") must list which signals you searched and found empty — never a
   bare "n/a".
+- **Authoritative signal, not keyword match.** Never assert yes/no from a loose
+  keyword hit — it can be a comment, a variable name, a vendored file, or a false
+  cognate. Anchor each verdict on the structural signal for the question (manifest/
+  lockfile, config/dependency block, concrete API path, schema/migration, real call
+  site). A bare keyword hit is a lead to verify, not evidence.
 - **Fail closed on uncertainty.** A negative is only valid against the canonical
   *active* repo. If the repo is archived/EOL/migrated or unreachable, tag findings
   "unverified — stale mirror" and emit no definitive negative.
-- **Cursory by default** — grep + read the hot spots; escalate to a deep trace only
-  where the cursory result is ambiguous. One service per cycle.
+- **Cursory by default, and cheap** — grep + read the hot spots; escalate to a deep
+  trace only where the cursory result is ambiguous. One service per cycle. Return the
+  conclusion + evidence, not file dumps.
 - Exclude `vendor/`, `node_modules/`, `.git/`, `__pycache__/`, and tests (note a
   test only if it reveals a production pattern).
 
