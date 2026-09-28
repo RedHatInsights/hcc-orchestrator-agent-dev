@@ -65,6 +65,8 @@ Implementation tickets from a scan carry `hcc-ai-orchestrator` + `hcc-impl` +
 `repo:<name>` and **no** `needs-investigation` label, so they route to
 `backend`/`frontend` and flow through the normal implement→PR loop.
 
+Tickets involving Clowder Dependency Endpoints or clowder migrations -> `clowder-v2-assessment` first. Only hand off to `clowder-v2-migration` when assessment produces a verified migration packet with no decision-required fields. For ref provisioning or cutover, also read `personas/clowder-v2/provisioning.md`.
+
 ## Cross-service scan workflow (analysis → tickets → implementation)
 
 A scan runs in four human-gated stages. The parallelism is in the *loop* (one
