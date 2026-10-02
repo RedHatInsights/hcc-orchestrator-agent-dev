@@ -185,3 +185,15 @@ I started the Clowder V2 migration assessment, but implementation is blocked unt
 ```
 
 Never ask for information until all discovery sources above have been checked.
+
+### Rehor task tracking
+
+When a memory task tracks this read-only assessment, keep it eligible for human
+comment follow-up but mark completion with top-level
+`metadata.last_step: investigation_posted`. Store Clowder-specific outcome
+(`assessment_posted` or `migration_packet_posted`) in nested assessment metadata or
+the task summary instead of `metadata.last_step`; shared Jira Kanban preflight
+recognizes only `investigation_posted` as completed no-PR investigation work. Keep the
+task `in_progress` while waiting for a human decision; this leaves comment polling
+enabled. Use bot-memory status `paused` only when an explicit status/unpause action is
+intended, since paused tasks are not polled for comments.

@@ -8,7 +8,7 @@ description: >
 when_to_use: >
   When a `hcc-scan` epic carrying the **`scan-aggregate`** label is picked up — the
   human adds that label (and returns the epic to the pickup queue) once the analysis
-  children have posted their findings (`last_step: analysis_posted`). Produces the
+  children have posted their findings (`last_step: investigation_posted`). Produces the
   epic-level summary the humans review before implementation tickets are generated.
   Also user-invocable on demand.
 user-invocable: true
@@ -26,6 +26,8 @@ allowed-tools:
 
 ## Steps
 
+0. **Resume or create the epic task.** `task_get` by Jira key; update an existing task
+   to `in_progress`, or `task_add` one if absent. Do not create a duplicate.
 1. **Collect the children.** Find the analysis tickets by the `scan:<epic-key>`
    label (`jira_search`) and/or the epic's issue links. For each, read the
    structured findings — prefer the task record's `metadata.findings` (one source
@@ -58,13 +60,18 @@ allowed-tools:
    project-repos.json. List these under "Outliers / follow-ups" — never silently
    drop a service.
 4. **Persist.** `memory_store` the cross-service conclusion (the common pattern and
-   the outliers for this focus) with `tags`; update the epic task record with
-   `last_step: "aggregated"` and a `metadata.followups` list the next step reads.
+   the outliers for this focus) with `tags`; update the epic task record with top-level
+   `metadata.last_step: "investigation_posted"`, `metadata.scan.last_step: "aggregated"`,
+   and a `metadata.followups` list the next step reads.
 5. **Clear the trigger.** `jira_update_issue` to remove the **`scan-aggregate`** label
    from the epic, so it is not re-aggregated on every subsequent pickup. (The human
    re-adds it to refresh the summary later — e.g. after an expansion adds services.)
 6. Do **not** create implementation tickets here. Leave the epic for human review;
-   `/generate-impl-tickets` runs after sign-off.
+   `/generate-impl-tickets` runs after sign-off. Keep the bot-memory task
+   `in_progress` with the `investigation_posted` marker and `metadata.scan.last_step:
+   "aggregated"` from step 4. This prevents repeat starts while keeping Jira comments
+   observable. A human can also requeue the Jira epic with its next trigger label, a
+   pickup status, and no assignee.
 
 ## Notes
 

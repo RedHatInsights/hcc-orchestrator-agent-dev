@@ -47,6 +47,29 @@ Epic  labels: hcc-ai-orchestrator + hcc-scan   (summary + description state the 
 (every ticket above also carries hcc-ai-orchestrator, the bot pickup label)
 ```
 
+## Jira Kanban preflight lifecycle
+
+The shared Jira Kanban preflight treats an `in_progress` task with no PR as
+interrupted unless its top-level `metadata.last_step` is exactly
+`investigation_posted`. Keep scan epic and analysis-child memory tasks `in_progress`
+while waiting for human action, and use top-level `metadata.last_step:
+investigation_posted` after completed no-PR work. Store workflow stage under
+`metadata.scan.last_step`. This prevents interrupted-cycle starts while preserving
+Jira comment polling.
+
+To re-trigger a stage, a human applies its trigger label, moves the Jira epic to a
+configured pickup status (normally *New*), and leaves it unassigned. Jira candidate
+search can then start a cycle while the existing memory task remains active. If task
+capacity is full, shared preflight searches only `needs-investigation` candidates; add
+a plain-text Jira comment with the trigger or wait for capacity. Use bot-memory status
+`paused` only when comments must not resume work: paused tasks leave preflight's active
+task triage and comment polling entirely.
+
+Analysis children remain eligible for comment follow-up, so their completed task
+records use `metadata.last_step: investigation_posted` rather than `analysis_posted`.
+This marker lets Kanban preflight distinguish completed read-only analysis from
+interrupted implementation without suppressing new Jira feedback.
+
 ## How a scan runs (generic)
 
 **1. Set up the scan (what a human does once).**
@@ -86,8 +109,9 @@ children into an epic-level table (service · stack · branch@HEAD · verdict ·
 the common pattern, outliers, and a follow-ups table, reconciles against the registry so
 no target is skipped, and removes the `scan-aggregate` label (re-add to refresh later).
 
-**5. Implementation tickets (bot, after human sign-off).** A human reviews the epic
-and adds `impl-approved`. `/generate-impl-tickets` then creates `hcc-impl` tickets
+**5. Implementation tickets (bot, after human sign-off).** A human reviews the epic,
+adds `impl-approved`, and returns it to a pickup status with no assignee.
+`/generate-impl-tickets` then creates `hcc-impl` tickets
 (labelled `hcc-ai-orchestrator` + `hcc-impl` + `repo:<name>`) with acceptance criteria,
 linked to the analysis tickets. These have **no** `needs-investigation` label, so the
 normal loop implements them with the `backend`/`frontend` persona.

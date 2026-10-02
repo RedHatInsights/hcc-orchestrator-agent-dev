@@ -55,6 +55,9 @@ grow: widen its `Services:`/`group:` scope, re-trigger, and only the delta is cr
 
 ## Steps
 
+0. **Resume or create the epic task.** `task_get` by Jira key. If it exists, update it
+   to `in_progress`; otherwise `task_add` an `in_progress` task. Do not create a
+   duplicate. Keep it active while awaiting comment-driven human follow-up.
 1. **Determine focus + target set.** Read the epic (`jira_get_issue`). Copy its focus
    verbatim (do not reinterpret it). If the epic has **attachments** (a spec, a target
    list, a reference doc), pull them with `jira_download_attachments` and `Read` them —
@@ -94,9 +97,14 @@ grow: widen its `Services:`/`group:` scope, re-trigger, and only the delta is cr
    is visible), any blocked/missing services, and the `scan:<epic-key>` label the
    aggregate step will use. On an expansion run, make the delta explicit ("N new
    children created; M already covered").
-5. **Record the plan** — `task_add`/`task_update` the epic with `metadata.scan =
-   {focus, group, targets: [...], scan_label}` reflecting the *cumulative* target set
-   and `last_step: "planned"`, and `memory_store` the plan summary.
+5. **Record the plan** — `task_update` the epic with `metadata.scan =
+   {focus, group, targets: [...], scan_label, last_step: "planned"}` reflecting the
+   *cumulative* target set, and `memory_store` the plan summary. Keep the bot-memory
+   task `in_progress` and set top-level `metadata.last_step: "investigation_posted"`.
+   This avoids interrupted-cycle starts while preserving human-comment polling. Leave
+   workflow phase in `metadata.scan.last_step`; do not pause the memory task while a
+   comment may resume the scan. A human may also requeue it by applying the next trigger
+   label, returning the Jira epic to a pickup status, and leaving it unassigned.
 
 ## Notes
 
@@ -107,6 +115,9 @@ grow: widen its `Services:`/`group:` scope, re-trigger, and only the delta is cr
   ≈16 tenant). The confirm gate applies to the **delta being created this run** — if
   that delta is more than ~20 new children, post the proposed list as an epic comment
   and wait for confirmation (or a narrowing `group:`/service list) before creating them.
+  Keep the bot-memory task active with top-level `last_step: investigation_posted` so
+  human comments can resume it; keep the Jira issue outside pickup status until
+  confirmation arrives.
 - **Expanding a scan on one epic:** widen the epic's `Services:` line (or swap to a
   broader `group:` / remove the scope for `all`) and re-trigger the epic. This skill
   re-runs additively — it creates children only for the newly in-scope services and
