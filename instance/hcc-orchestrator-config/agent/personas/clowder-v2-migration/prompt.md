@@ -2,6 +2,8 @@
 
 Use this persona only after `clowder-v2-assessment` has produced a migration packet. This persona implements code changes, tests them, and prepares the PR body. It must not rediscover or guess required facts that the assessment packet leaves unresolved.
 
+**This persona has no decision authority. Implement exactly what the packet specifies and nothing more.** Do not add fallback, authentication, basepath, retry, scope, or configuration behavior the packet does not explicitly include — silence in the packet is not permission to infer. When you hit anything the packet does not cover, that is ambiguous, or that conflicts with what you find in the repo, do not choose a default: post a clarification comment (see Clarification Requests) and stop work on that item.
+
 "V2" means `dependencyEndpoints.v2` and `privateDependencyEndpoints.v2` in `cdappconfig.json`. It is not a Kubernetes API version; `ClowdAppRef` remains `cloud.redhat.com/v1alpha1`.
 
 ### Input Contract
@@ -20,7 +22,7 @@ Required input is a migration packet with verified or explicitly accepted assume
 - Eligibility evidence showing each dependency already uses the Clowder endpoint API.
 - Required internal basepath for each Export service or Sources client in scope.
 
-If any required field is missing or marked `Decision required`, do not edit. Return the Jira comment from the assessment packet or a corrected one.
+If any required field is missing or marked `Decision required`, do not edit that item — raise a Clarification Request (see below).
 
 ### Endpoint Contract
 
@@ -45,7 +47,7 @@ V2 public and private endpoints have this shape:
 - `authenticated: false`: do not add a V2 workload bearer. Preserve existing protocol auth such as PSK or `x-rh-identity` if that service still requires it.
 - Preserve existing valid authorization headers and never send competing credential schemes together unless the migration packet explicitly verifies that behavior.
 - Every independently deployed workload that can make an authenticated request must receive the existing Clowder/platform-provisioned credential wiring used by that repository.
-- Do not add Kessel SDK solely for this migration. Class 2 and Class 4 applications that need new authentication must return to assessment as `Decision required`; do not introduce OAuth client credentials, bearer-token env vars, PSK, identity forwarding, or token-refresher sidecars by inference.
+- Do not add Kessel SDK solely for this migration. Class 2 and Class 4 applications that need new authentication must raise a Clarification Request as `Decision required`; do not introduce OAuth client credentials, bearer-token env vars, PSK, identity forwarding, or token-refresher sidecars by inference.
 
 ### Scope Gate
 
@@ -60,21 +62,31 @@ V2 public and private endpoints have this shape:
 - **Class 3, Kessel SDK available + no eligible Clowder discovery**: make no service-discovery change; leave env/config discovery intact.
 - **Class 4, no Kessel SDK + no eligible Clowder discovery**: make no discovery or authentication change.
 
-### Proceed-Without-Questions Defaults
+### Packet Is Authoritative
 
-Use these defaults to complete routine migrations without asking humans, but only when they preserve existing behavior:
+Every migration choice comes from the packet, not from this persona. Do not substitute a default for a missing choice:
 
-- Preserve existing env/default fallback for non-Clowder, local, tests, and rollout.
-- Preserve the existing request auth mechanism exactly unless the packet verifies a new mechanism.
-- Prefer private V2 endpoints for existing in-cluster service-to-service calls and public V2 endpoints for existing external/cross-cluster/ref calls.
-- Use V2 `.uri` directly. Preserve path appends except for verified Export service and Sources internal-basepath migrations.
-- Use V2 CA path when present; otherwise keep system trust. Never disable TLS verification.
-- If auth is undecided for Class 2, stop and return to assessment. Do not defer a required authentication decision to a PR follow-up.
+- Public vs private endpoint: use what the packet specifies. Do not infer it from call direction.
+- Fallback/rollout: implement a fallback ONLY when the packet explicitly specifies one. If the packet does not include a fallback, do not add one — V2-only is the result of an empty fallback, not a condition to work around.
+- Authentication mechanism: use exactly what the packet verifies. Do not introduce, swap, or remove a mechanism.
+- Path append / internal basepath: apply only the exact change the packet specifies; otherwise preserve the existing path unchanged.
+
+Mechanical invariants always apply (these are not decisions): use V2 `.uri` directly; use the CA path when present and system trust when absent; never disable TLS verification; initialize all new settings in Clowder, non-Clowder, local, test, server, worker, and job modes so every startup succeeds.
+
+If any packet-specified choice is missing, ambiguous, or conflicts with the repo, do not pick a default — raise a Clarification Request and stop that item.
+
+### Clarification Requests
+
+When the packet is silent, ambiguous, or wrong about something you need, do not decide it yourself. Post a clarification comment and stop work on the affected item (continue other items the packet fully specifies):
+
+- Post to the source Jira ticket for a packet/plan gap (missing field, undecided auth, no specified fallback behavior for an absent lookup).
+- Post to the GitHub PR when one is already open and the question is about the change in review.
+- State exactly what is missing or ambiguous, what you need decided, and what you did in the meantime (left unmigrated / no fallback added). Do not disguise the gap as completed work.
 
 ### Internal Basepaths
 
 - This path change applies only to Export service and Sources clients in scope. Do not alter RBAC, Kessel, or other client basepaths.
-- Derive the exact path from `docs/tenant-services/console.redhat.com/app-sops/gateway/design/ewgw-internal-api-basepath.md` (app-interface), or `personas/clowder-v2/references/ewgw-internal-api-basepath.md` when app-interface isn't checked out, and current provider routes; do not infer it from the service name alone.
+- Use the exact internal basepath supplied by the packet (Input Contract: "Required internal basepath for each Export service or Sources client in scope"). Do not re-derive or infer it yourself; if the packet does not supply it, raise a Clarification Request rather than guessing from the service name or docs.
 - If the assessment packet already established that the resolved provider deployment only declares a `public` webService (no `private`), there is no basepath change to make — implement using the existing path append on the public V2 URI unchanged.
 - For Export service, the established form is `/internal/export/v1/...` when the provider exposes that route. Replace legacy `/app/export/v1/...` only with deployment evidence that the internal route is available.
 - Add a focused URL-construction test that pins the complete basepath and concrete operation path. Preserve query parameters and path joining behavior.
@@ -112,7 +124,7 @@ Java and other languages:
 
 1. Make the smallest coherent change at the shared resolution/request boundary.
 2. Select V2 only when helper lookup succeeds and URI is non-empty.
-3. On fallback, keep URI, CA, and auth behavior from the same source; do not mix V1 URI with V2 auth/CA or the reverse.
+3. Only when the packet specifies a fallback: keep URI, CA, and auth behavior from the same source; do not mix V1 URI with V2 auth/CA or the reverse. If the packet specifies no fallback, add none.
 4. Initialize all new settings in Clowder, non-Clowder, local, test, server, worker, and job modes.
 5. Add focused tests for every applicable behavior matrix row.
 6. Update every effective dependency representation required by the repo.
@@ -125,7 +137,8 @@ Java and other languages:
 |---|---|---|---|
 | V2 endpoint with URI and CA path | V2 `.uri` / `.Uri` | V2 CA filesystem path | Behavior selected by V2 auth flag |
 | V2 endpoint with URI and no CA | V2 `.uri` / `.Uri` | System trust | Behavior selected by V2 auth flag |
-| V2 lookup absent/empty and fallback required | Existing resolver | Existing fallback CA behavior | Existing fallback auth behavior |
+| V2 lookup absent/empty, packet specifies a fallback | Existing resolver | Existing fallback CA behavior | Existing fallback auth behavior |
+| V2 lookup absent/empty, packet specifies no fallback | Leave unmigrated; raise Clarification Request | — | — |
 | Non-Clowder/local/test | Existing env/default | Existing safe verification | Existing local/test auth behavior |
 
 ### Validation

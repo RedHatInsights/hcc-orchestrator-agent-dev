@@ -52,15 +52,16 @@ Goal: avoid asking humans when repository evidence supports a conservative migra
   offline, or when the table is stale and no fresher evidence is available — treat that exactly like a missing
   `cdappconfig.json`.
 - **Public vs private endpoint**: preserve current traffic scope. Existing in-cluster service-to-service calls should prefer private endpoints when available. Existing external/cross-cluster/ref traffic should use the public endpoint. If current traffic scope is ambiguous, inspect generated config and deployment manifests before asking.
-- **Fallback behavior**: preserve existing env/default fallback for non-Clowder, local, tests, and rollout unless the repo already has a tested Clowder-only pattern. Do not ask whether local env fallback is needed; assume yes.
-- **URI construction**: prefer complete V2 `uri` values over rebuilding host/scheme/port. For legacy fallback, preserve the repo's existing URL builder exactly unless it is clearly the migration target.
+- **Non-Clowder/local/test defaults**: always initialize the new settings for non-Clowder, local, and test modes (there is no Clowder config there) so every startup succeeds. This is mechanical initialization, not a rollout fallback — do not ask whether it is needed; include it.
+- **V1/rollout fallback**: default to NONE. Clowder dependency API V2 is rolled out on all clusters, so do not put a V1 rollout fallback in the packet. Include one only with specific, cited evidence that a target cluster still lacks V2; if that evidence is ambiguous, mark `Decision required` rather than defaulting a fallback in. An absent V2 endpoint at runtime is a misconfiguration to surface, not a reason to resolve V1.
+- **URI construction**: prefer complete V2 `uri` values over rebuilding host/scheme/port. Only when the packet includes a fallback, preserve the repo's existing URL builder exactly unless it is clearly the migration target.
 - **TLS/CA**: use V2 `ca_certificate` when present; otherwise preserve system trust. Never ask whether to disable TLS verification.
 - **Auth when existing mechanism is clear**: preserve the repo's existing Kessel/OAuth/workload/PSK/identity behavior at the same request boundary. Do not ask for confirmation just because V2 exposes `authenticated`.
 - **Auth when no mechanism exists**: do not invent one. If the ticket can be completed as discovery-only while preserving existing auth, produce a discovery-only packet and list cross-cluster auth as a follow-up/decision. If the ticket explicitly requires authenticated cross-cluster calls, block with `Decision required`.
 
 ### Scope Gate
 
-- Service discovery changes are limited to RBAC, Kessel, Export service, and Sources. Do not migrate other tenant-to-tenant dependencies unless Jira explicitly assigns that separate work.
+- Service discovery changes are limited to RBAC, Kessel, Export service, and Sources.
 - A dependency is eligible only when its client already obtains that dependency through the Clowder endpoint API. Migrate that lookup to V2; do not replace env/config-based discovery with Clowder as part of this work.
 - Treat env/config-only discovery as `Out of scope`, not as a migration gap. Record the current mechanism and the external configuration owner in the packet when known.
 - Dead declarations, unused Clowder dependencies, and Clowder used only for unrelated infrastructure do not establish eligibility. Trace the effective client lookup.
@@ -80,7 +81,7 @@ Goal: avoid asking humans when repository evidence supports a conservative migra
    - Deployment key.
    - Public or private endpoint.
    - Current discovery mechanism.
-   - Required V1/env fallback during rollout, if any.
+   - Required V1/env rollout fallback, if any — default none (V2 is rolled out everywhere); include only with cited evidence a cluster lacks V2.
    - Existing request path(s), basepath, and shared request boundary.
    - Existing auth behavior that must remain.
    - Existing workload/OAuth/Kessel credential wiring.
@@ -106,6 +107,8 @@ V2 public and private endpoints have this shape:
 - `ca_certificate`: optional filesystem path. It is not PEM content. When absent, callers should preserve system trust and never disable TLS verification.
 
 For HCC services, `authenticated: true` usually maps to the app's existing workload/OAuth/Kessel auth capability. When a supported Kessel SDK is already available, require its established authentication facility rather than a bespoke token client. Verify the exact SDK API, credential wiring, and caller coverage from the installed version.
+
+Before the packet directs the implementer to attach a workload bearer for `authenticated: true`, confirm the downstream service actually validates one (an `Authorization`/Bearer/JWT/OIDC handler). Do not assume RBAC, Sources, or Export service is bearer-ready or public-only — verify per service. If the downstream has no bearer validation (for example `sources-api-go` accepts only `x-rh-identity`/PSK), the packet must specify **warn-and-skip**: preserve the existing auth, do not attach a token that would be ignored or rejected, and record it under Human Verification Required. If downstream readiness cannot be determined, default to warn-and-skip and flag it — do not block the whole packet on readiness alone.
 
 Do not add Kessel SDK solely to satisfy this migration. Authentication for Class 2 and Class 4 applications remains a product/platform decision: if an eligible endpoint requires new authentication, mark it `Decision required` and block rather than selecting OAuth, PSK, identity forwarding, or sidecars.
 
@@ -163,7 +166,7 @@ Do not hand off to `clowder-v2-migration` when any of these are decision-require
 - Public/private endpoint choice.
 - Authentication behavior for `authenticated: true` or `authenticated: false`.
 - Authentication mechanism for a Class 2 or Class 4 application. Do not propose adding Kessel SDK as the default resolution.
-- Required fallback/rollout behavior.
+- Required fallback/rollout behavior — only when evidence genuinely conflicts about whether a cluster has V2. The default is no fallback; do not block merely because fallback was not mentioned.
 - Existing credential source/wiring for authenticated calls.
 - Independently deployed workload coverage.
 - Effective V2 helper availability.
@@ -176,7 +179,7 @@ I started the Clowder V2 migration assessment, but implementation is blocked unt
 
 - Confirm V2 endpoint key for `<dependency>`:
 - Confirm public or private endpoint for `<dependency>`:
-- Confirm whether V1/env fallback is required during rollout:
+- (Only if cluster V2 availability is in doubt) Confirm whether a V1 rollout fallback is required; default is none:
 - Confirm expected auth behavior when V2 `authenticated` is true:
 - Confirm existing workload credential wiring for callers:
 - Confirm which deployed workloads execute these callers:
