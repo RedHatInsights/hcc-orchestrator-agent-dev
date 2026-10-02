@@ -93,6 +93,29 @@ carries `hcc-ai-orchestrator` (the bot pickup label).
    `hcc-impl` tickets (core-hcc / tenant / both), linked back, which then flow through
    the normal implement loop.
 
+### Task lifecycle and Kanban preflight
+
+The shared Jira Kanban preflight treats every `in_progress` task without a PR as
+interrupted unless top-level `metadata.last_step` is exactly `investigation_posted`.
+For scan epics and analysis tasks that must resume on human comments, keep the
+bot-memory task `in_progress` and set top-level `metadata.last_step` to exactly
+`investigation_posted` when stage work completes. Store workflow phase in nested
+metadata (for epics, `metadata.scan.last_step`). This suppresses false interrupted
+starts while preserving comment polling. A human can also requeue an epic by adding
+the stage label, moving its Jira issue to a configured pickup status (normally
+*New*), and clearing assignee. At max task capacity, preflight searches only
+`needs-investigation` candidates, so add a plain-text Jira comment with the trigger or
+wait for capacity; comment triage runs before that capacity check. Reactivate existing
+task record as needed; do not create a duplicate.
+
+`task_update(status="paused", paused_reason=...)` means bot-memory task is excluded
+from active-task triage and comment polling. Reserve it for waits that should require
+an explicit status/unpause action; do not use it for scan work where humans may resume
+through comments. Keep workflow-specific terminal values such as `analysis_posted`,
+`assessment_posted`, `aggregated`, `all_analyses_complete`, `migration_packet_posted`,
+or `feedback_addressed` out of top-level `metadata.last_step` when completed no-PR work
+must remain comment-watchable.
+
 Read-only enforcement for analysis: the `scan-service` skill's `allowed-tools`
 exclude `Edit`/`Write`/push/PR, and the `analyst` persona forbids mutation. A
 hard runtime guarantee (a PreToolUse deny-hook) is a framework-level ask — the

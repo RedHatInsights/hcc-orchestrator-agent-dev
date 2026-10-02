@@ -55,7 +55,9 @@ ticket, and `memory_store`.
 - The **service** — the single `repo:<name>` label on the ticket.
 
 If either the focus or the service is missing or ambiguous, post a Jira comment
-asking for clarification and stop — do not guess the focus.
+asking for clarification, set top-level `metadata.last_step: "investigation_posted"`
+on the active task, and stop — do not guess the focus. This lets Kanban preflight
+watch for the human's reply without restarting the investigation each cycle.
 
 ## Steps
 
@@ -124,8 +126,12 @@ asking for clarification and stop — do not guess the focus.
    ticket, and `jira_update_issue` to reflect the verdict/summary.
 10. **Persist.** `memory_store` the durable conclusion (category `codebase_pattern`
     or `learning`, with `repo` + `tags`). Update the analysis task record
-    (`task_update`) with `last_step: "analysis_posted"` and a structured
-    `metadata.findings` block so `/aggregate-scan` can roll it up.
+    (`task_update`) to remain `in_progress`, with top-level
+    `metadata.last_step: "investigation_posted"` and a structured
+    `metadata.findings` block so `/aggregate-scan` can roll it up. Keep this exact
+    marker: shared Jira Kanban preflight uses it to distinguish completed read-only
+    analysis from interrupted work while still checking newer Jira comments. Do not
+    pause these tasks; humans may reply on Jira and expect follow-up.
 11. Do **not** transition the ticket to done or archive it — analysis tickets stay
     open until the aggregate + human review.
 

@@ -27,15 +27,20 @@ allowed-tools:
 ## Gate
 
 Do not proceed unless BOTH are true:
-- the epic is aggregated (`metadata.followups` present / `last_step: aggregated`), and
+- the epic is aggregated (`metadata.followups` present and
+  `metadata.scan.last_step: aggregated`), and
 - a human has approved (label `impl-approved` on the epic, or an explicit approving
-  comment). If not approved, comment asking for sign-off and stop.
+  comment). If not approved, comment asking for sign-off, leave the bot-memory task
+  `in_progress`, and set top-level `metadata.last_step: "investigation_posted"` so
+  approval comment can wake it.
 
 Idempotency: check for existing implementation children (label `hcc-impl` +
 `scan:<epic-key>`) before creating; never duplicate.
 
 ## Steps
 
+0. **Resume or create the epic task.** `task_get` by Jira key; update an existing task
+   to `in_progress`, or `task_add` one if absent. Do not create a duplicate.
 1. Read the epic's approved `metadata.followups` (target, scope, change).
 2. For each follow-up, create an implementation ticket with `jira_create_issue`:
    - **Summary:** imperative, scoped to one repo (e.g.
@@ -58,6 +63,11 @@ Idempotency: check for existing implementation children (label `hcc-impl` +
    scope, one-line change).
 5. `memory_store` the mapping (finding -> impl ticket) so future scans dedup
    against existing work.
+6. Keep the bot-memory task `in_progress` and set top-level
+   `metadata.last_step: "investigation_posted"`; set
+   `metadata.scan.last_step: "implementation_tickets_generated"`. Human comments can
+   then resume the epic-level workflow. A Jira pickup status, no assignee, and the
+   corresponding trigger label also make it eligible as new work.
 
 ## Handoff to implementation
 
