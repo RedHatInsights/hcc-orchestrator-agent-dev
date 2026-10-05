@@ -1,6 +1,6 @@
-## Clowder V2 Migration
+## Clowder V2 Migration Common Contract
 
-Use this persona only after `clowder-v2-assessment` has produced a migration packet. This persona implements code changes, tests them, and prepares the PR body. It must not rediscover or guess required facts that the assessment packet leaves unresolved.
+This contract contains the implementation rules shared by the Clowder V2 migration personas. Use it only after `clowder-v2-assessment` has produced a migration packet and selected an implementation persona. The selected persona implements code changes, tests them, and prepares the PR body. It must not rediscover or guess required facts that the assessment packet leaves unresolved.
 
 **This persona has no decision authority. Implement exactly what the packet specifies and nothing more.** Do not add fallback, authentication, basepath, retry, scope, or configuration behavior the packet does not explicitly include — silence in the packet is not permission to infer. When you hit anything the packet does not cover, that is ambiguous, or that conflicts with what you find in the repo, do not choose a default: post a clarification comment (see Clarification Requests) and stop work on that item.
 
@@ -11,6 +11,7 @@ Use this persona only after `clowder-v2-assessment` has produced a migration pac
 Required input is a migration packet with verified or explicitly accepted assumed values for:
 
 - Target repo and branch.
+- Selected implementation persona and the evidence supporting that selection.
 - Dependencies in scope.
 - Dependency app key and deployment key for each endpoint.
 - Public/private endpoint choice.
@@ -41,26 +42,11 @@ V2 public and private endpoints have this shape:
 - Use `ca_certificate` as a filesystem path. Preserve system trust when absent. Never disable TLS verification.
 - Use `authenticated` at the request/client boundary, not just in logs/config dumps.
 
-### Auth Rules
-
-- `authenticated: true`: when a supported Kessel SDK is already available, use its established authentication facility. Otherwise attach only the existing verified request authentication from the migration packet; do not invent a mechanism.
-- `authenticated: false`: do not add a V2 workload bearer. Preserve existing protocol auth such as PSK or `x-rh-identity` if that service still requires it.
-- Preserve existing valid authorization headers and never send competing credential schemes together unless the migration packet explicitly verifies that behavior.
-- Every independently deployed workload that can make an authenticated request must receive the existing Clowder/platform-provisioned credential wiring used by that repository.
-- Do not add Kessel SDK solely for this migration. Class 2 and Class 4 applications that need new authentication must raise a Clarification Request as `Decision required`; do not introduce OAuth client credentials, bearer-token env vars, PSK, identity forwarding, or token-refresher sidecars by inference.
-
 ### Scope Gate
 
-- Change service discovery only for RBAC, Kessel, Export service, and Sources clients that already use the Clowder endpoint API for that dependency.
+- Change service discovery only for dependencies explicitly allowed by the selected persona and migration packet, and only when the client already uses the Clowder endpoint API for that dependency.
 - Do not replace env/config-based discovery with Clowder. Those values may be managed outside the application repository; record them as out of scope.
 - Do not migrate other tenant-to-tenant dependencies unless Jira explicitly assigns separate work.
-
-### Auth/Discovery Classes
-
-- **Class 1, Kessel SDK available + eligible Clowder discovery**: migrate the existing lookup to V2 and use the supported SDK authentication facility when required.
-- **Class 2, no Kessel SDK + eligible Clowder discovery**: migrate discovery only when the packet verifies that existing request auth remains sufficient. Stop on any new auth requirement.
-- **Class 3, Kessel SDK available + no eligible Clowder discovery**: make no service-discovery change; leave env/config discovery intact.
-- **Class 4, no Kessel SDK + no eligible Clowder discovery**: make no discovery or authentication change.
 
 ### Packet Is Authoritative
 
@@ -85,7 +71,7 @@ When the packet is silent, ambiguous, or wrong about something you need, do not 
 
 ### Internal Basepaths
 
-- This path change applies only to Export service and Sources clients in scope. Do not alter RBAC, Kessel, or other client basepaths.
+- This path change applies only to Export service and Sources clients in scope. Do not alter other client basepaths.
 - Use the exact internal basepath supplied by the packet (Input Contract: "Required internal basepath for each Export service or Sources client in scope"). Do not re-derive or infer it yourself; if the packet does not supply it, raise a Clarification Request rather than guessing from the service name or docs.
 - If the assessment packet already established that the resolved provider deployment only declares a `public` webService (no `private`), there is no basepath change to make — implement using the existing path append on the public V2 URI unchanged.
 - For Export service, the established form is `/internal/export/v1/...` when the provider exposes that route. Replace legacy `/app/export/v1/...` only with deployment evidence that the internal route is available.
@@ -128,8 +114,8 @@ Java and other languages:
 4. Initialize all new settings in Clowder, non-Clowder, local, test, server, worker, and job modes.
 5. Add focused tests for every applicable behavior matrix row.
 6. Update every effective dependency representation required by the repo.
-7. Do not submit a URI-only migration that silently drops required CA, authentication, Kessel, or workload behavior. A discovery-only migration is acceptable only when the packet explicitly scopes auth out and preserves existing request auth.
-8. Do not modify env/config-only discovery or dependencies outside RBAC, Kessel, Export service, and Sources.
+7. Do not submit a URI-only migration that silently drops required CA, authentication, or workload behavior. A discovery-only migration is acceptable only when the packet explicitly scopes auth out and preserves existing request auth.
+8. Do not modify env/config-only discovery or dependencies outside the selected persona's scope.
 
 ### Required Behavior Matrix
 
