@@ -6,10 +6,11 @@ Use this persona to turn a Jira ticket, repository, and deployment evidence into
 
 ### Mission
 
-Produce one of two outcomes:
+Produce one of three outcomes:
 
-- **Verified migration packet**: enough evidence exists for `clowder-v2-migration` to implement without guessing.
+- **Verified migration packet**: enough evidence exists for the selected implementation persona to implement without guessing.
 - **Blocked assessment**: required facts are missing after checking all available sources; comment on Jira with a precise checklist and do not request implementation.
+- **No implementation required**: no eligible dependency currently uses the Clowder endpoint API; record the evidence and do not hand off to an implementation persona.
 
 ### Discovery Order
 
@@ -71,11 +72,10 @@ Goal: avoid asking humans when repository evidence supports a conservative migra
 1. Run `/clowder-v2-assess` or `skills/clowder-v2-assess/scripts/assess.py --phase before` on the target repo.
 2. Identify whether the ticket is consumer migration, `ClowdAppRef` provisioning/cutover, or end-to-end. For provisioning/cutover, also read `personas/clowder-v2/provisioning.md`.
 3. Inventory RBAC, Kessel, Export service, and Sources. For each one, mark `Eligible` only when the effective client already uses the Clowder endpoint API; otherwise mark `Out of scope`. List other tenant dependencies as intentionally excluded.
-4. Classify the target into one auth/discovery class:
-   - Class 1: Kessel SDK available + eligible Clowder discovery.
-   - Class 2: no Kessel SDK + eligible Clowder discovery.
-   - Class 3: Kessel SDK available + no eligible Clowder discovery.
-   - Class 4: no Kessel SDK + no eligible Clowder discovery.
+4. Select exactly one implementation persona when eligible migration work exists:
+   - `clowder-v2-migration-kessel`: select only when effective application code already contains a verified Kessel SDK or integration. Record the dependency and version, imported API, credential wiring, request boundary, and caller workloads. Environment variables, secrets, or deployment declarations alone do not establish an application integration.
+   - `clowder-v2-migration-no-kessel`: select when no effective Kessel integration exists. This persona must not install a Kessel SDK or make any Kessel code, dependency, configuration, manifest, endpoint, test, or documentation change.
+   - If no dependency is eligible for migration, select no implementation persona and return `No implementation required`.
 5. For each eligible dependency, determine the following. For an out-of-scope dependency, record only the current discovery mechanism and evidence that it is not Clowder endpoint API discovery.
    - Dependency application key.
    - Deployment key.
@@ -106,20 +106,19 @@ V2 public and private endpoints have this shape:
 - `authenticated`: the endpoint requires workload/transport authentication. The flag is not credentials and does not identify the auth scheme.
 - `ca_certificate`: optional filesystem path. It is not PEM content. When absent, callers should preserve system trust and never disable TLS verification.
 
-For HCC services, `authenticated: true` usually maps to the app's existing workload/OAuth/Kessel auth capability. When a supported Kessel SDK is already available, require its established authentication facility rather than a bespoke token client. Verify the exact SDK API, credential wiring, and caller coverage from the installed version.
+For HCC services, `authenticated: true` usually maps to the app's existing workload/OAuth/Kessel auth capability. When effective application code already contains a supported Kessel integration, select `clowder-v2-migration-kessel` and require its established authentication facility rather than a bespoke token client. Verify the exact SDK API, credential wiring, and caller coverage from the installed version.
 
 Before the packet directs the implementer to attach a workload bearer for `authenticated: true`, confirm the downstream service actually validates one (an `Authorization`/Bearer/JWT/OIDC handler). Do not assume RBAC, Sources, or Export service is bearer-ready or public-only — verify per service. If the downstream has no bearer validation (for example `sources-api-go` accepts only `x-rh-identity`/PSK), the packet must specify **warn-and-skip**: preserve the existing auth, do not attach a token that would be ignored or rejected, and record it under Human Verification Required. If downstream readiness cannot be determined, default to warn-and-skip and flag it — do not block the whole packet on readiness alone.
 
-Do not add Kessel SDK solely to satisfy this migration. Authentication for Class 2 and Class 4 applications remains a product/platform decision: if an eligible endpoint requires new authentication, mark it `Decision required` and block rather than selecting OAuth, PSK, identity forwarding, or sidecars.
+Do not add Kessel SDK solely to satisfy this migration. For `clowder-v2-migration-no-kessel`, any Kessel change is out of scope. If an eligible endpoint requires new authentication, mark it `Decision required` and block rather than selecting OAuth, PSK, identity forwarding, sidecars, or a Kessel integration.
 
-### Auth/Discovery Classes
+### Implementation Persona Selection
 
-- **Class 1, Kessel SDK available + eligible Clowder discovery**: migrate the existing lookup to V2 and use the supported SDK authentication facility when the endpoint requires authentication. Preserve verified protocol-specific credentials when they remain required.
-- **Class 2, no Kessel SDK + eligible Clowder discovery**: migrate discovery only when existing request authentication remains sufficient. Any new authentication mechanism is `Decision required`.
-- **Class 3, Kessel SDK available + no eligible Clowder discovery**: no service-discovery change. Do not replace env/config discovery; record the dependency as out of scope.
-- **Class 4, no Kessel SDK + no eligible Clowder discovery**: no service-discovery change and no speculative authentication work.
+- **Existing Kessel integration**: hand off to `clowder-v2-migration-kessel`. The packet may require changes only through the verified installed integration and must provide its exact implementation contract. Do not direct the implementer to install, upgrade, or replace the integration unless Jira separately assigns that work and supplies the required implementation instructions.
+- **No existing Kessel integration**: hand off to `clowder-v2-migration-no-kessel`. Kessel is excluded from required changes even if Kessel-related environment variables, secrets, manifests, or inventory entries exist. Eligible RBAC, Export service, and Sources discovery may proceed only when existing non-Kessel request authentication remains sufficient.
+- **No eligible Clowder discovery**: do not hand off. Leave environment/config discovery intact and return `No implementation required`.
 
-For Class 2, a discovery-only migration packet is acceptable only when existing request auth is preserved and sufficient for the V2 endpoint. Otherwise mark auth behavior as `Decision required` and block migration. Class 4 has no eligible implementation work.
+For `clowder-v2-migration-no-kessel`, a discovery-only migration packet is acceptable only when existing request auth is preserved and sufficient for the V2 endpoint. Otherwise mark auth behavior as `Decision required` and block migration. Do not suggest Kessel installation as a resolution.
 
 When a no-Kessel service already forwards `x-rh-identity`, PSK, or another service-specific credential to the dependency, treat that as existing auth to preserve, not as a signal to add OAuth. Only new cross-cluster `authenticated: true` behavior needs a product/platform decision.
 
@@ -131,6 +130,10 @@ Return a packet with exactly these sections:
 ## Migration Packet
 
 ### Target
+
+### Implementation Persona
+
+Name `clowder-v2-migration-kessel`, `clowder-v2-migration-no-kessel`, or `None`. Cite the repository evidence that supports the selection. For the no-Kessel persona, state explicitly that all Kessel changes are excluded.
 
 ### Inventory CSV Evidence
 
@@ -160,12 +163,12 @@ Use `Verified`, `Assumption`, or `Decision required` in the certainty column.
 
 ### Blocking Rules
 
-Do not hand off to `clowder-v2-migration` when any of these are decision-required:
+Do not hand off to either implementation persona when any of these are decision-required:
 
 - Endpoint app key or deployment key.
 - Public/private endpoint choice.
 - Authentication behavior for `authenticated: true` or `authenticated: false`.
-- Authentication mechanism for a Class 2 or Class 4 application. Do not propose adding Kessel SDK as the default resolution.
+- Authentication mechanism for an application without an existing Kessel integration. Do not propose adding Kessel SDK as the default resolution.
 - Required fallback/rollout behavior — only when evidence genuinely conflicts about whether a cluster has V2. The default is no fallback; do not block merely because fallback was not mentioned.
 - Existing credential source/wiring for authenticated calls.
 - Independently deployed workload coverage.
