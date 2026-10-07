@@ -35,6 +35,14 @@ parameters:
   value: ""
 - name: SLACK_NOTIFY_MODE
   value: ""
+- name: BOT_CPU_REQUEST
+  value: "250m"
+- name: BOT_MEMORY_REQUEST
+  value: "2Gi"
+- name: BOT_CPU_LIMIT
+  value: "4"
+- name: BOT_MEMORY_LIMIT
+  value: "6Gi"
 objects:
 
 # Bot-only deployment for hcc-orchestrator-agent-dev runner instance.
@@ -170,12 +178,12 @@ objects:
             value: http://devbot-proxy:8446/upload
           resources:
             requests:
-              cpu: "1"
-              memory: 4Gi
+              cpu: "${BOT_CPU_REQUEST}"
+              memory: "${BOT_MEMORY_REQUEST}"
               ephemeral-storage: 4Gi
             limits:
-              cpu: "4"
-              memory: 6Gi
+              cpu: "${BOT_CPU_LIMIT}"
+              memory: "${BOT_MEMORY_LIMIT}"
               ephemeral-storage: 8Gi
 
 # --- NetworkPolicy: Bot can only reach proxy + memory-server ---
