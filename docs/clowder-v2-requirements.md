@@ -1,6 +1,8 @@
 # Clowder V2 Migration — Requirement Set (draft v3, for review)
 
-Status: draft for human review, 2026-10-22 (rev 3). Rev 3 applies field rulings on
+Status: draft for human review, 2026-10-30 (rev 4). Rev 4 adds credential lifecycle (A3b),
+CA coverage (R2b), dependency lockfiles (P7), and the Q13 ruling on existing bearers (A6a), from
+review of an `automation-analytics-backend` RBAC migration. Rev 3 applied field rulings on
 `authenticated`, the SDK gate, and bearer acceptance; rev 2 was the initial distillation.
 The persona files are now the operative contract. This document is the requirement
 catalog and rationale record for review.
@@ -46,6 +48,7 @@ Service-to-service calls are either unauthenticated (identity only) or PSK-authe
 | A1 | **Reuse the Kessel SDK's `OAuth2ClientCredentials` to obtain the bearer token.** `[NEW]` |
 | A2 | **Do not** hand-roll a token client, token cache, refresh loop, or credential provider. `[NEW]` — narrow the current ban on "inventing OAuth client credentials" to *hand-rolled* clients, since A1 mandates the SDK helper. |
 | A3 | Use the SDK's established client construction and lifecycle patterns; do not restructure them. |
+| A3b | Construct the SDK `OAuth2ClientCredentials` **once per process** and reuse it. The SDK caches the token only per instance, and does not cache `fetch_oidc_discovery`. Building credentials per request or per call discards the token cache and adds a discovery and token round-trip to every call. Memoizing the SDK instance is required and is not a hand-rolled cache under A2. |
 | A4 | SDK presence satisfies G1. If the client-credentials inputs the SDK needs are not wired for a workload, that is a packet gap to raise (clarification), not an entry-gate failure and not a reason to invent wiring. |
 
 ### 2.2 Attaching the token
@@ -54,6 +57,7 @@ Service-to-service calls are either unauthenticated (identity only) or PSK-authe
 |---|---|
 | A5 | Keep `x-rh-identity` when present. It is end-user context, not service authentication; never replace it or treat it as a service credential. `[NEW]` |
 | A6 | `authenticated: true` → send the bearer. If the call sends PSK, the bearer replaces PSK; do not send both. Any other existing credential → preserve unless the packet says otherwise. |
+| A6a | A call site that **already sends a bearer** keeps it unchanged, whatever the `authenticated` value; do not add a second (A7). A call site that does not send a bearer gets one gated on the V2 endpoint's `authenticated` flag (A10/A11). The V2 endpoint is expected to be present; its absence is a misconfiguration to surface (P4), not a reason to fall back to another gate. See Q13. |
 | A6b | The bearer is validated by the gateway. `sources-api-go` does not parse `Authorization`; a call that bypasses the gateway path requires confirmation (`Decision required`). |
 | A7 | Never send two competing credentials *of the same scheme*. One bearer, not two. |
 | A8 | Apply the token at the shared request boundary so every caller workload uses it, not at individual call sites. |
@@ -95,6 +99,7 @@ A10 as written — see Q2.
 |---|---|
 | R1 | V2 endpoints are `{uri, authenticated, ca_certificate}`. Use `uri` directly; never rebuild scheme, hostname, or port. |
 | R2 | `ca_certificate` is a filesystem path, not PEM. Use system trust when absent. Never disable TLS verification. |
+| R2b | The resolved `ca_certificate` applies to **every** call to that dependency: call sites the migration otherwise leaves untouched, and SDK helpers that issue HTTP requests themselves. Where a helper takes no `verify` argument, pass it a configured `http_client`/session (e.g. `kessel.rbac.v2.fetch_default_workspace`). A call site that keeps default trust while others use the CA is a defect. |
 | R3 | `ClowdAppRef` provides **no custom CA path**. Remote certificates MUST be system-trusted. |
 | R4 | `metadata.name` = consumer-declared dependency string (first V2 map key); `deployments[].name` = second key; `hostname` is host/IP only, no scheme or port. |
 | R5 | Enable only the `public`/`private` webService actually consumed. TLS requires `webServices.<svc>.tls: true` **and** both `remoteEnvironment.tls.port` and `.privatePort`, even for public-only use. The CRD does not validate these relationships. |
@@ -114,7 +119,8 @@ A10 as written — see Q2.
 | P3 | Any `Decision required` field blocks handoff. The implementer has no decision authority; silence in the packet is not permission to infer. |
 | P4 | Fallback defaults to none. Add a V1/rollout fallback only with cited evidence a target cluster lacks V2. An absent V2 endpoint at runtime is a misconfiguration to surface. |
 | P5 | Basepath changes apply only to Export service and Sources, only when the provider declares a private webService the consumer actually resolves to. Use the packet's exact basepath; never re-derive it. |
-| P6 | Cheap local validation only: focused unit tests per behavior-matrix row, lint, syntax/import check, `assess.py --phase after`. Do not stand up DB/broker or run the full suite locally; CI is authoritative. |
+| P6 | Cheap local validation only: focused unit tests per behavior-matrix row, lint, syntax/import check, lockfile consistency (P7), `assess.py --phase after`. Do not stand up DB/broker or run the full suite locally; CI is authoritative. |
+| P7 | Bumping the Clowder client library to obtain the V2 helpers is permitted (unlike the Kessel SDK, G6). Any lockfile MUST be regenerated in the same change so it stays consistent with the dependency manifest, and the bump MUST follow the repo's existing version-pinning convention. Verify that the **locked** version provides the V2 helper the code calls: builds install from the lockfile, not the manifest. |
 
 ---
 
@@ -144,6 +150,7 @@ A10 as written — see Q2.
 | Q8 | Is SDK presence alone enough, or are wired credentials required? | Presence alone satisfies G1. Missing credential wiring is a packet gap, not an entry-gate stop (A4). |
 | Q9 | Export callers use `x-rh-exports-psk`; is bearer + PSK intended? | No. PSK is service authentication; the bearer replaces it for the cross-cluster gateway. `x-rh-identity` is user context and is retained. |
 | Q11 | Is `authenticated: false` expected? | No. `true` is the norm for current apps and use cases; `false` is possible in principle but not expected. The flag stays authoritative (A11/A12). |
+| Q13 | A call site already sends a bearer unconditionally. Does the `authenticated` flag override it (A10/A11 vs A19)? | No. Keep the existing bearer. Call sites without a bearer get one gated on V2 `authenticated`. V2 is expected to be present. See A6a. |
 
 ### 6.2 Still open
 
